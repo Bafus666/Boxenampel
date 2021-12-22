@@ -13,6 +13,7 @@ const unsigned int rundumleuchte_pin = 2;
 // Wartezeiten (seconds)
 const unsigned int warten_rot = 27;
 const unsigned int warten_rotgelb = 3;
+const unsigned int min_warten_gruen = 5;
 
 // int = Integer == Ganzzahl (-5,0,1,3,4)
 // unsigned == ohne Vorzeichen (nur nicht-negative Zahlen, 0,1,2, ...)
@@ -34,12 +35,14 @@ void setup() {
 enum state_type { grundzustand, box_frei, box_belegt, ausfahrt_vorbereiten };
 state_type zustand = grundzustand;
 
+unsigned long current_millis;
 unsigned long millis_at_box_belegt;
 unsigned long millis_at_ausfahrt_vorbereiten;
+unsigned long millis_at_box_frei;
 
 void loop() {
 
-  unsigned long current_millis = millis();
+  current_millis = millis();
 
   // Zustandsübergänge (Pfeile)
   if (zustand == grundzustand) {
@@ -47,7 +50,9 @@ void loop() {
       zustand = box_frei;
     }
   } else if (zustand == box_frei) {
-    if (digitalRead(taster_pin) == LOW) {
+    if (digitalRead(schalter_pin) == HIGH && current_millis >= min_warten_gruen * 1000 + millis_at_box_frei) {
+      zustand = grundzustand;
+    } else if (digitalRead(taster_pin) == LOW) {
       zustand = box_belegt;
       millis_at_box_belegt = current_millis;
     }
@@ -59,8 +64,7 @@ void loop() {
   } else if (zustand == ausfahrt_vorbereiten) {
     if (current_millis >= warten_rotgelb * 1000 + millis_at_ausfahrt_vorbereiten) {
       zustand = box_frei;
-    } else if (digitalRead(schalter_pin) == HIGH) {
-      zustand = grundzustand;
+      millis_at_box_frei = current_millis;
     }
   }
 
