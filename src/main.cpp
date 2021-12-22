@@ -1,14 +1,18 @@
 #include <Arduino.h>
 
 // Eingänge
-unsigned int schalter_pin = 12;
-unsigned int taster_pin = 13;
+const unsigned int schalter_pin = 12;
+const unsigned int taster_pin = 13;
 
 // Ausgänge
-unsigned int ampel_rot_pin = 5;
-unsigned int ampel_gelb_pin = 4;
-unsigned int ampel_gruen_pin = 3;
-unsigned int rundumleuchte_pin = 2;
+const unsigned int ampel_rot_pin = 5;
+const unsigned int ampel_gelb_pin = 4;
+const unsigned int ampel_gruen_pin = 3;
+const unsigned int rundumleuchte_pin = 2;
+
+// Wartezeiten (seconds)
+const unsigned int warten_rot = 27;
+const unsigned int warten_rotgelb = 3;
 
 // int = Integer == Ganzzahl (-5,0,1,3,4)
 // unsigned == ohne Vorzeichen (nur nicht-negative Zahlen, 0,1,2, ...)
@@ -30,7 +34,12 @@ void setup() {
 enum state_type { grundzustand, box_frei, box_belegt, ausfahrt_vorbereiten };
 state_type zustand = grundzustand;
 
+unsigned long millis_at_box_belegt;
+unsigned long millis_at_ausfahrt_vorbereiten;
+
 void loop() {
+
+  unsigned long current_millis = millis();
 
   // Zustandsübergänge (Pfeile)
   if (zustand == grundzustand) {
@@ -40,15 +49,15 @@ void loop() {
   } else if (zustand == box_frei) {
     if (digitalRead(taster_pin) == LOW) {
       zustand = box_belegt;
+      millis_at_box_belegt = current_millis;
     }
   } else if (zustand == box_belegt) {
-    if (true) { // Todo: nach 27 s
+    if (current_millis >= warten_rot * 1000 + millis_at_box_belegt) {
       zustand = ausfahrt_vorbereiten;
-    } else { // noch nicht 27 s um
-      zustand = box_belegt; // könnten wir uns sparen
+      millis_at_ausfahrt_vorbereiten = current_millis;
     }
   } else if (zustand == ausfahrt_vorbereiten) {
-    if (false) { // Todo: nach 3 s
+    if (current_millis >= warten_rotgelb * 1000 + millis_at_ausfahrt_vorbereiten) {
       zustand = box_frei;
     } else if (digitalRead(schalter_pin) == HIGH) {
       zustand = grundzustand;
